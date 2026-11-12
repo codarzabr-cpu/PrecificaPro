@@ -1,0 +1,23 @@
+<div class="page-heading">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> PARÂMETROS DO NEGÓCIO</div><h1>Configurações<span class="title-dot">.</span></h1><p>Ajuste os parâmetros usados no cálculo do seu valor-hora.</p></div>
+</div>
+<section class="content-split settings-layout">
+    <article class="panel form-panel">
+        <div class="panel-heading"><div><h3>Parâmetros de precificação</h3><p>Os valores atualizados serão aplicados aos próximos orçamentos.</p></div></div>
+        <form method="post" class="form-stack">
+            <label>Horas disponíveis por mês<input name="horas_mensais" type="number" min="1" max="744" step="1" value="{{ config.horas_mensais }}" required><small>Considere apenas as horas que pretende dedicar a trabalhos remunerados.</small></label>
+            <label>Margem de lucro (%)<input name="margem_lucro" type="number" min="0" max="1000" step="0.1" value="{{ config.margem_lucro }}" required><small>Margem adicionada ao custo da sua hora.</small></label>
+            <label>Impostos estimados (%)<input name="impostos" type="number" min="0" max="99.9" step="0.1" value="{{ config.impostos }}" required><small>Estimativa da parcela da receita destinada a impostos.</small></label>
+            <button class="button button-primary full-button" type="submit">Salvar configurações</button>
+        </form>
+    </article>
+    <article class="panel formula-panel">
+        <span class="formula-icon">ƒx</span>
+        <h3>Como o valor-hora é calculado</h3>
+        <p>O sistema considera as despesas mensais, as horas disponíveis, a margem de lucro e os impostos informados.</p>
+        <div class="formula-code">Valor-hora =<br><br>(Despesas ÷ Horas) × (1 + Margem)<br>────────────────────────<br>(1 − Impostos)</div>
+        <div class="summary-callout"><span>ⓘ</span><p>Use os percentuais como números de 0 a 100. Exemplo: informe 30 para uma margem de 30%.</p></div>
+    </article>
+</section>
+
+

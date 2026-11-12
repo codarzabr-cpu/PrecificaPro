@@ -1,0 +1,19 @@
+<div class="page-heading">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> ANÁLISE FINANCEIRA</div><h1>Relatórios<span class="title-dot">.</span></h1><p>Consulte os valores das propostas e acompanhe os resultados.</p></div>
+    <button class="button button-secondary" onclick="window.print()">↗ Imprimir relatório</button>
+</div>
+<section class="stats-grid">
+    <article class="stat-card"><div class="stat-top"><span>Valor total proposto</span><span class="stat-icon blue">R$</span></div><div class="stat-value">{{ total|dinheiro }}</div><div class="stat-note">Todas as propostas registradas</div></article>
+    <article class="stat-card"><div class="stat-top"><span>Receita aprovada</span><span class="stat-icon green">↗</span></div><div class="stat-value">{{ receita_aprovada|dinheiro }}</div><div class="stat-note">Orçamentos aprovados</div></article>
+    <article class="stat-card"><div class="stat-top"><span>Despesas mensais</span><span class="stat-icon amber">▤</span></div><div class="stat-value">{{ despesas_total|dinheiro }}</div><div class="stat-note">Custos fixos atuais</div></article>
+    <article class="stat-card"><div class="stat-top"><span>Resultado estimado</span><span class="stat-icon purple">◈</span></div><div class="stat-value">{{ lucro_estimado|dinheiro }}</div><div class="stat-note">Receita aprovada menos despesas mensais</div></article>
+</section>
+<section class="panel table-panel">
+    <div class="panel-heading"><div><h3>Detalhamento de propostas</h3><p>{{ quantidade }} registro(s) no histórico.</p></div><input class="search-input" id="tableSearch" placeholder="⌕  Buscar..."></div>
+    <div class="table-scroll"><table id="searchTable"><thead><tr><th>CLIENTE</th><th>SERVIÇO</th><th>DATA</th><th>VALOR</th><th>STATUS</th></tr></thead><tbody>
+    <tr><td><strong>{{ o.cliente }}</strong></td><td>{{ o.servico }}</td><td>{{ o.data }}</td><td class="money-cell">{{ o.valor_total|dinheiro }}</td><td><span class="status-badge {{ o.status|lower }}">{{ o.status }}</span></td></tr>
+    <tr><td colspan="5" class="empty-cell">Ainda não há dados suficientes para este relatório.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+<div class="report-note">Os valores são estimativas gerenciais e não substituem um relatório contábil. As despesas consideradas são as despesas mensais cadastradas.</div>
+

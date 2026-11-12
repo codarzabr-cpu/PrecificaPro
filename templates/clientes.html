@@ -1,0 +1,21 @@
+<div class="page-heading">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> RELACIONAMENTO</div><h1>Clientes<span class="title-dot">.</span></h1><p>Organize seus contatos e facilite a criação de propostas.</p></div>
+</div>
+<section class="panel form-panel">
+    <div class="panel-heading"><div><h3>Novo cliente</h3><p>Cadastre as informações de contato.</p></div></div>
+    <form method="post" class="form-grid">
+        <label>Nome completo ou empresa<input name="nome" required maxlength="120" placeholder="Nome do cliente"></label>
+        <label>E-mail<input name="email" type="email" placeholder="cliente@email.com" maxlength="150"></label>
+        <label>Telefone<input name="telefone" placeholder="(00) 00000-0000" maxlength="30"></label>
+        <div class="form-action"><button class="button button-primary" type="submit">＋ Adicionar cliente</button></div>
+    </form>
+</section>
+<section class="panel table-panel">
+    <div class="panel-heading"><div><h3>Carteira de clientes</h3><p>{{ clientes_lista|length }} contato(s) cadastrado(s).</p></div><input class="search-input" id="tableSearch" placeholder="⌕  Buscar cliente..."></div>
+    <div class="table-scroll"><table id="searchTable"><thead><tr><th>CLIENTE</th><th>E-MAIL</th><th>TELEFONE</th><th></th></tr></thead><tbody>
+    {% for c in clientes_lista %}
+    <tr><td><div class="client-cell"><span class="client-avatar">{{ c.nome[:1]|upper }}</span><strong>{{ c.nome }}</strong></div></td><td>{{ c.email or '—' }}</td><td>{{ c.telefone or '—' }}</td><td><form method="post" action="{{ url_for('excluir_cliente', cliente_id=c.id) }}" onsubmit="return confirm('Remover este cliente?')"><button class="icon-button danger" title="Excluir">×</button></form></td></tr>
+    {% else %}<tr><td colspan="4" class="empty-cell">Nenhum cliente cadastrado. Adicione seu primeiro contato acima.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+

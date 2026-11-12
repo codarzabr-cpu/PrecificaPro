@@ -1,0 +1,123 @@
+
+{% extends "base.html" %}
+{% block title %}Visão geral{% endblock %}
+{% block breadcrumb %}Visão geral{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow"><span class="eyebrow-line"></span> PAINEL FINANCEIRO</div>
+        <h1>Visão geral<span class="title-dot">.</span></h1>
+        <p>Acompanhe os números do seu negócio em um só lugar.</p>
+    </div>
+    <a class="button button-primary" href="{{ url_for('orcamentos') }}">＋ Novo orçamento</a>
+</div>
+
+<section class="welcome-banner">
+    <div class="welcome-copy">
+        <span class="banner-tag">SEU NEGÓCIO, SOB CONTROLE</span>
+        <h2>Boas decisões começam<br>com bons números.</h2>
+        <p>Organize seu trabalho, valorize suas horas e acompanhe sua evolução.</p>
+    </div>
+    <div class="banner-art"><div class="art-ring ring-one"></div><div class="art-ring ring-two"></div><div class="art-core">R$</div></div>
+    <div class="banner-rate"><span>VALOR-HORA CALCULADO</span><strong>{{ valor_hora|dinheiro }}</strong><small>Com base nos seus custos e parâmetros</small></div>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <div class="stat-top"><span>Faturamento em propostas</span><span class="stat-icon green">↗</span></div>
+        <div class="stat-value">{{ faturamento|dinheiro }}</div>
+        <div class="stat-note">Soma de todos os orçamentos</div>
+    </article>
+    <article class="stat-card">
+        <div class="stat-top"><span>Despesas mensais</span><span class="stat-icon blue">▤</span></div>
+        <div class="stat-value">{{ despesas|dinheiro }}</div>
+        <div class="stat-note">Custos fixos cadastrados</div>
+    </article>
+    <article class="stat-card">
+        <div class="stat-top"><span>Orçamentos aprovados</span><span class="stat-icon purple">✓</span></div>
+        <div class="stat-value">{{ aprovados }}</div>
+        <div class="stat-note">Propostas marcadas como aprovadas</div>
+    </article>
+    <article class="stat-card">
+        <div class="stat-top"><span>Em aberto</span><span class="stat-icon amber">◷</span></div>
+        <div class="stat-value">{{ pendentes }}</div>
+        <div class="stat-note">Aguardando retorno do cliente</div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel chart-panel">
+        <div class="panel-heading">
+            <div><h3>Visão de faturamento</h3><p>Valores totais dos orçamentos por mês</p></div>
+            <span class="panel-chip">ÚLTIMOS MESES</span>
+        </div>
+        <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+        <script id="chartLabels" type="application/json">{{ grafico_labels|tojson }}</script>
+        <script id="chartValues" type="application/json">{{ grafico_valores|tojson }}</script>
+    </article>
+
+    <article class="panel summary-panel">
+        <div class="panel-heading"><div><h3>Resumo financeiro</h3><p>Indicadores gerais</p></div></div>
+        <div class="summary-row"><span>Lucro estimado*</span><strong class="{{ 'positive' if lucro >= 0 else 'negative' }}">{{ lucro|dinheiro }}</strong></div>
+        <div class="summary-row"><span>Clientes cadastrados</span><strong>{{ dados.clientes|length }}</strong></div>
+        <div class="summary-row"><span>Total de propostas</span><strong>{{ dados.orcamentos|length }}</strong></div>
+        <div class="summary-callout"><span>ⓘ</span><p>*Estimativa simples: propostas totais menos despesas mensais. Não representa lucro contábil.</p></div>
+    </article>
+</section>
+
+<section class="panel table-panel">
+    <div class="panel-heading">
+        <div><h3>Propostas recentes</h3><p>Acompanhe os últimos orçamentos cadastrados.</p></div>
+        <a class="text-link" href="{{ url_for('orcamentos') }}">Ver todos <span>→</span></a>
+    </div>
+    <div class="table-scroll">
+        <table>
+            <thead><tr><th>CLIENTE</th><th>SERVIÇO</th><th>DATA</th><th>VALOR</th><th>STATUS</th></tr></thead>
+            <tbody>
+            {% for o in recentes %}
+                <tr>
+                    <td><strong>{{ o.cliente }}</strong></td><td>{{ o.servico }}</td><td>{{ o.data }}</td>
+                    <td class="money-cell">{{ o.valor_total|dinheiro }}</td>
+                    <td><span class="status-badge {{ o.status|lower }}">{{ o.status }}</span></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="empty-cell">Nenhum orçamento ainda. Crie sua primeira proposta para começar.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const labels = JSON.parse(document.getElementById('chartLabels').textContent);
+const values = JSON.parse(document.getElementById('chartValues').textContent);
+const canvas = document.getElementById('revenueChart');
+if (canvas) {
+    new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets: [{
+            label: 'Valor dos orçamentos', data: values,
+            borderColor: '#71F0B0', backgroundColor: 'rgba(113,240,176,.10)',
+            fill: true, tension: .38, borderWidth: 2.5,
+            pointRadius: 3, pointHoverRadius: 5,
+            pointBackgroundColor: '#71F0B0'
+        }]},
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: {
+                backgroundColor: '#172331', titleColor: '#fff',
+                bodyColor: '#71F0B0', padding: 12,
+                callbacks: { label: ctx => ' R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+            }},
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#8D9DB0' }, border: { display: false } },
+                y: { beginAtZero: true, grid: { color: 'rgba(130,150,170,.10)' },
+                    ticks: { color: '#8D9DB0', callback: v => 'R$ ' + v.toLocaleString('pt-BR') },
+                    border: { display: false } }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

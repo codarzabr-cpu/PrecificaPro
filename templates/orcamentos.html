@@ -1,0 +1,28 @@
+<div class="page-heading">
+    <div><div class="eyebrow"><span class="eyebrow-line"></span> PROPOSTAS COMERCIAIS</div><h1>Orçamentos<span class="title-dot">.</span></h1><p>Monte propostas com base no seu valor-hora calculado.</p></div>
+</div>
+<section class="panel form-panel">
+    <div class="panel-heading"><div><h3>Criar orçamento</h3><p>O valor total será calculado automaticamente pelo sistema.</p></div><span class="panel-chip">VALOR-HORA: {{ valor_hora|dinheiro }}</span></div>
+    <form method="post" class="form-grid">
+        <label>Cliente
+            <input name="cliente" list="listaClientes" placeholder="Selecione ou digite o cliente" required maxlength="120">
+            <datalist id="listaClientes">{% for c in clientes_lista %}<option value="{{ c.nome }}">{% endfor %}</datalist>
+        </label>
+        <label>Serviço ou projeto<input name="servico" required maxlength="160" placeholder="Ex.: Desenvolvimento de site"></label>
+        <label>Horas estimadas<input name="horas" type="number" min="0.1" step="0.1" required placeholder="Ex.: 20"></label>
+        <div class="form-action"><button class="button button-primary" type="submit">＋ Gerar orçamento</button></div>
+    </form>
+</section>
+<section class="panel table-panel">
+    <div class="panel-heading"><div><h3>Histórico de propostas</h3><p>Pesquise serviços e atualize o status das propostas.</p></div><input class="search-input" id="tableSearch" placeholder="⌕  Buscar orçamento..."></div>
+    <div class="table-scroll"><table id="searchTable"><thead><tr><th>CLIENTE / SERVIÇO</th><th>DATA</th><th>HORAS</th><th>VALOR TOTAL</th><th>STATUS</th><th></th></tr></thead><tbody>
+    
+    <tr>
+        <td><strong>{{ o.cliente }}</strong><small class="table-subtitle">{{ o.servico }}</small></td>
+        <td>{{ o.data }}</td><td>{{ '%.1f'|format(o.horas) }} h</td><td class="money-cell">{{ o.valor_total|dinheiro }}</td>
+        <td><form method="post" action="{{ url_for('atualizar_status', orcamento_id=o.id) }}"><select class="status-select {{ o.status|lower }}" name="status" onchange="this.form.submit()"><option {% if o.status == 'Pendente' %}selected{% endif %}>Pendente</option><option {% if o.status == 'Aprovado' %}selected{% endif %}>Aprovado</option><option {% if o.status == 'Recusado' %}selected{% endif %}>Recusado</option></select></form></td>
+        <td><form method="post" action="{{ url_for('excluir_orcamento', orcamento_id=o.id) }}" onsubmit="return confirm('Excluir este orçamento?')"><button class="icon-button danger" title="Excluir">×</button></form></td>
+    </tr>
+  <tr><td colspan="6" class="empty-cell">Nenhum orçamento criado. Use o formulário acima para gerar sua primeira proposta.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>

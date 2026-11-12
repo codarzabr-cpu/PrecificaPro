@@ -1,0 +1,80 @@
+{
+    "configuracao": {
+        "horas_mensais": 100.0,
+        "margem_lucro": 30.0,
+        "impostos": 10.0
+    },
+    "despesas": {
+        "casa": 4000.0
+    },
+    "clientes": [
+        {
+            "id": "6263b623-bfe1-47c7-ae5c-8ed63aa911b8",
+            "nome": "HENRIQUE ZAVASKI",
+            "email": "henzavaski@gmail.com",
+            "telefone": "41987485138"
+        }
+    ],
+    "orcamentos": [
+        {
+            "id": "678463c0-dfd8-45fe-ba63-4c41cd643e31",
+            "cliente": "Henrique",
+            "servico": "Site",
+            "horas": 150.0,
+            "valor_hora": 25.93,
+            "valor_total": 3889.63,
+            "status": "Aprovado",
+            "data": "2026-10-15"
+        },
+        {
+            "id": "600374c1-29a5-49e8-8132-ddf11c3dc821",
+            "cliente": "teste",
+            "servico": "Site",
+            "horas": 20.0,
+            "valor_hora": 25.93,
+            "valor_total": 518.62,
+            "status": "Aprovado",
+            "data": "2026-10-15"
+        },
+        {
+            "id": "5832b9af-a46c-46a0-b40f-993467ab1ff8",
+            "cliente": "teste 2",
+            "servico": "Site",
+            "horas": 35.0,
+            "valor_hora": 25.93,
+            "valor_total": 907.58,
+            "status": "Recusado",
+            "data": "2026-10-15"
+        },
+        {
+            "id": "163db103-8e92-44a4-9b77-1b6d1c8ea2a5",
+            "cliente": "HENRIQUE ZAVASKI",
+            "servico": "Site",
+            "horas": 180.0,
+            "valor_hora": 25.93,
+            "valor_total": 4667.55,
+            "status": "Aprovado",
+            "data": "2026-10-15"
+        },
+        {
+            "id": "af15bc44-d54f-4260-82cf-42f09756b173",
+            "cliente": "HENRIQUE ZAVASKI",
+            "servico": "Software de teste",
+            "horas": 50.0,
+            "valor_hora": 23.94,
+            "valor_total": 1196.81,
+            "status": "Aprovado",
+            "data": "2026-10-15"
+        },
+        {
+            "id": "df6e7f5e-73cf-48f9-939a-e25b8f04e4bf",
+            "cliente": "teste 4",
+            "servico": "dev",
+            "horas": 100.0,
+            "valor_hora": 43.33,
+            "valor_total": 4333.33,
+            "status": "Aprovado",
+            "data": "2026-10-15"
+        }
+    ]
+}
