@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from pathlib import Path
 from datetime import datetime
 from werkzeug.exceptions import HTTPException
@@ -10,6 +10,8 @@ import threading
 import webbrowser
 import logging
 import math
+from assistente import responder
+import ia
 import os
 import smtplib
 from email.message import EmailMessage
@@ -55,11 +57,7 @@ logger = logging.getLogger("precifica_pro")
 # FLASK
 # =========================================================
 
-app = Flask(
-    __name__,
-    template_folder=str(BASE_DIR / "templates"),
-    static_folder=str(BASE_DIR / "static")
-)
+app = Flask(__name__, template_folder=None, static_folder=None)
 
 app.secret_key = "precifica-pro-chave-local"
 
@@ -68,8 +66,8 @@ app.secret_key = "precifica-pro-chave-local"
 def diagnostico():
     return {
         "flask": "funcionando",
-        "templates": (BASE_DIR / "templates").exists(),
-        "dashboard": (BASE_DIR / "templates" / "dashboard.html").exists(),
+        "frontend_react_compilado": (BASE_DIR / "frontend" / "dist" / "index.html").exists(),
+        "api": "disponivel",
         "dados_existem": ARQUIVO_DADOS.exists()
     }
 # =========================================================
@@ -244,70 +242,23 @@ def registrar_erro(erro):
 # DASHBOARD
 # =========================================================
 
+def servir_react():
+    """Entrega a SPA React e impede fallback para telas Jinja antigas."""
+    frontend_dist = BASE_DIR / "frontend" / "dist"
+    index_file = frontend_dist / "index.html"
+    if not index_file.exists():
+        return (
+            "A interface React ainda não foi compilada. Execute "
+            "iniciar_precifica_pro.bat na pasta raiz do projeto.",
+            503,
+            {"Content-Type": "text/plain; charset=utf-8"}
+        )
+    return send_from_directory(frontend_dist, "index.html")
+
+
 @app.route("/")
 def dashboard():
-    dados = carregar_dados()
-    orcamentos = [
-        o for o in dados["orcamentos"]
-        if isinstance(o, dict)
-    ]
-
-    faturamento = sum(
-        numero(o.get("valor_total", 0))
-        for o in orcamentos
-    )
-
-    despesas_total = sum(
-        numero(v)
-        for v in dados["despesas"].values()
-    )
-
-    aprovados = sum(
-        1 for o in orcamentos
-        if o.get("status") == "Aprovado"
-    )
-
-    pendentes = sum(
-        1 for o in orcamentos
-        if o.get("status") == "Pendente"
-    )
-
-    meses = {}
-
-    for orc in orcamentos:
-        try:
-            data = datetime.strptime(
-                str(orc["data"]),
-                "%Y-%m-%d"
-            )
-
-            chave = data.strftime("%m/%Y")
-
-            meses[chave] = (
-                meses.get(chave, 0)
-                + numero(orc.get("valor_total", 0))
-            )
-
-        except (ValueError, KeyError, TypeError):
-            logger.warning(
-                "Orçamento ignorado no gráfico por data inválida: %r",
-                orc
-            )
-
-    grafico = sorted(meses.items())[-6:]
-
-    return render_template(
-        "dashboard.html",
-        dados=dados,
-        faturamento=faturamento,
-        despesas=despesas_total,
-        lucro=faturamento - despesas_total,
-        aprovados=aprovados,
-        pendentes=pendentes,
-        recentes=list(reversed(orcamentos[-5:])),
-        grafico_labels=[x[0] for x in grafico],
-        grafico_valores=[round(x[1], 2) for x in grafico]
-    )
+    return servir_react()
 
 
 # =========================================================
@@ -316,6 +267,9 @@ def dashboard():
 
 @app.route("/despesas", methods=["GET", "POST"])
 def despesas():
+    if request.method == "GET":
+        return servir_react()
+
     dados = carregar_dados()
 
     if request.method == "POST":
@@ -368,6 +322,9 @@ def excluir_despesa(nome):
 
 @app.route("/clientes", methods=["GET", "POST"])
 def clientes():
+    if request.method == "GET":
+        return servir_react()
+
     dados = carregar_dados()
 
     if request.method == "POST":
@@ -472,6 +429,9 @@ Atenciosamente,
 
 @app.route("/orcamentos", methods=["GET", "POST"])
 def orcamentos():
+    if request.method == "GET":
+        return servir_react()
+
     dados = carregar_dados()
 
     if request.method == "POST": 
@@ -561,41 +521,7 @@ def excluir_orcamento(orcamento_id):
 
 @app.route("/relatorios")
 def relatorios():
-    dados = carregar_dados()
-    orcamentos = [
-        o for o in dados["orcamentos"]
-        if isinstance(o, dict)
-    ]
-
-    total = sum(
-        numero(o.get("valor_total", 0))
-        for o in orcamentos
-    )
-
-    aprovados = [
-        o for o in orcamentos
-        if o.get("status") == "Aprovado"
-    ]
-
-    receita_aprovada = sum(
-        numero(o.get("valor_total", 0))
-        for o in aprovados
-    )
-
-    despesas_total = sum(
-        numero(v)
-        for v in dados["despesas"].values()
-    )
-
-    return render_template(
-        "relatorios.html",
-        quantidade=len(orcamentos),
-        total=total,
-        receita_aprovada=receita_aprovada,
-        despesas_total=despesas_total,
-        lucro_estimado=receita_aprovada - despesas_total,
-        orcamentos_lista=list(reversed(orcamentos))
-    )
+    return servir_react()
 
 
 # =========================================================
@@ -604,6 +530,9 @@ def relatorios():
 
 @app.route("/configuracoes", methods=["GET", "POST"])
 def configuracoes():
+    if request.method == "GET":
+        return servir_react()
+
     dados = carregar_dados()
 
     if request.method == "POST":
@@ -645,6 +574,224 @@ def configuracoes():
         "configuracoes.html",
         config=dados["configuracao"]
     )
+
+
+@app.get("/precificacao")
+def pagina_precificacao():
+    return servir_react()
+
+
+# =========================================================
+# API REST PARA O FRONTEND REACT
+# =========================================================
+
+@app.get("/api/state")
+def api_state():
+    dados = carregar_dados()
+    orcamentos = [o for o in dados["orcamentos"] if isinstance(o, dict)]
+    despesas_total = sum(numero(v) for v in dados["despesas"].values())
+    faturamento = sum(numero(o.get("valor_total", 0)) for o in orcamentos if o.get("status") == "Aprovado")
+    total_orcado = sum(numero(o.get("valor_total", 0)) for o in orcamentos)
+    aprovados = sum(1 for o in orcamentos if o.get("status") == "Aprovado")
+    pendentes = sum(1 for o in orcamentos if o.get("status") == "Pendente")
+    recusados = sum(1 for o in orcamentos if o.get("status") == "Recusado")
+    meses = {}
+    for item in orcamentos:
+        try:
+            dt = datetime.strptime(str(item.get("data", "")), "%Y-%m-%d")
+            key = dt.strftime("%b/%y")
+            meses[key] = meses.get(key, 0) + numero(item.get("valor_total", 0))
+        except (ValueError, TypeError):
+            pass
+    chart = [{"month": k, "value": round(v, 2)} for k, v in sorted(meses.items(), key=lambda x: datetime.strptime(x[0], "%b/%y"))[-6:]]
+    return jsonify({
+        "configuracao": dados["configuracao"],
+        "despesas": dados["despesas"],
+        "clientes": dados["clientes"],
+        "orcamentos": list(reversed(orcamentos)),
+        "metricas": {"faturamento": round(faturamento, 2), "total_orcado": round(total_orcado, 2), "despesas": round(despesas_total, 2), "lucro": round(faturamento-despesas_total, 2), "aprovados": aprovados, "pendentes": pendentes, "recusados": recusados, "taxa_aprovacao": round((aprovados / len(orcamentos) * 100) if orcamentos else 0, 1), "valor_hora": round(calcular_valor_hora(dados), 2)},
+        "grafico": chart
+    })
+
+@app.put("/api/configuracoes")
+def api_configuracoes():
+    payload = request.get_json(silent=True) or {}
+    horas = numero(payload.get("horas_mensais"), -1)
+    margem = numero(payload.get("margem_lucro"), -1)
+    impostos = numero(payload.get("impostos"), -1)
+    if horas <= 0 or margem < 0 or not 0 <= impostos < 100:
+        return jsonify({"erro": "Confira horas, margem e impostos."}), 400
+    dados = carregar_dados()
+    dados["configuracao"] = {"horas_mensais": horas, "margem_lucro": margem, "impostos": impostos}
+    salvar_dados(dados)
+    return jsonify({"mensagem": "Configurações atualizadas."})
+
+@app.post("/api/despesas")
+def api_criar_despesa():
+    payload = request.get_json(silent=True) or {}
+    nome = str(payload.get("nome", "")).strip()
+    valor = numero(payload.get("valor"), 0)
+    if not nome or valor <= 0:
+        return jsonify({"erro": "Informe descrição e valor maior que zero."}), 400
+    dados = carregar_dados()
+    dados["despesas"][nome] = round(valor, 2)
+    salvar_dados(dados)
+    return jsonify({"mensagem": "Despesa salva."}), 201
+
+@app.delete("/api/despesas/<path:nome>")
+def api_excluir_despesa(nome):
+    dados = carregar_dados()
+    if nome not in dados["despesas"]:
+        return jsonify({"erro": "Despesa não encontrada."}), 404
+    del dados["despesas"][nome]
+    salvar_dados(dados)
+    return jsonify({"mensagem": "Despesa removida."})
+
+@app.post("/api/clientes")
+def api_criar_cliente():
+    payload = request.get_json(silent=True) or {}
+    nome = str(payload.get("nome", "")).strip()
+    if not nome:
+        return jsonify({"erro": "O nome é obrigatório."}), 400
+    dados = carregar_dados()
+    cliente = {"id": str(uuid.uuid4()), "nome": nome, "email": str(payload.get("email", "")).strip(), "telefone": str(payload.get("telefone", "")).strip()}
+    dados["clientes"].append(cliente)
+    salvar_dados(dados)
+    return jsonify(cliente), 201
+
+@app.delete("/api/clientes/<cliente_id>")
+def api_excluir_cliente(cliente_id):
+    dados = carregar_dados()
+    antes = len(dados["clientes"])
+    dados["clientes"] = [c for c in dados["clientes"] if c.get("id") != cliente_id]
+    if len(dados["clientes"]) == antes:
+        return jsonify({"erro": "Cliente não encontrado."}), 404
+    salvar_dados(dados)
+    return jsonify({"mensagem": "Cliente removido."})
+
+@app.post("/api/orcamentos")
+def api_criar_orcamento():
+    payload = request.get_json(silent=True) or {}
+    cliente = str(payload.get("cliente", "")).strip()
+    servico = str(payload.get("servico", "")).strip()
+    horas = numero(payload.get("horas"), 0)
+    dados = carregar_dados()
+    extras = numero(payload.get("custos_extras", 0), -1)
+    margem = numero(payload.get("margem_lucro", dados["configuracao"]["margem_lucro"]), -1)
+    imposto = numero(dados["configuracao"]["impostos"]) / 100
+    horas_mes = numero(dados["configuracao"]["horas_mensais"])
+    if not cliente or not servico or horas <= 0 or extras < 0 or margem < 0 or horas_mes <= 0 or not 0 <= imposto < 1:
+        return jsonify({"erro": "Confira cliente, serviço, horas, custos extras e parâmetros."}), 400
+    custo_hora = sum(numero(v) for v in dados["despesas"].values()) / horas_mes
+    custo = custo_hora * horas + extras
+    valor_hora_atual = custo_hora * (1 + margem/100) / (1-imposto)
+    valor_total = custo * (1 + margem/100) / (1-imposto)
+    if not math.isfinite(valor_total) or valor_total <= 0:
+        return jsonify({"erro": "Cadastre despesas ou custos extras válidos para formar o preço."}), 400
+    orcamento = {
+        "id": str(uuid.uuid4()), "cliente": cliente, "servico": servico,
+        "horas": horas, "valor_hora": round(valor_hora_atual, 2),
+        "custos_extras": extras, "margem_lucro": margem,
+        "impostos": round(imposto * 100, 4), "custo_total": round(custo, 2),
+        "valor_total": round(valor_total, 2),
+        "lucro_estimado": round(valor_total * (1-imposto) - custo, 2),
+        "status": "Pendente", "data": datetime.now().strftime("%Y-%m-%d")
+    }
+    dados["orcamentos"].append(orcamento)
+    salvar_dados(dados)
+    return jsonify(orcamento), 201
+
+@app.patch("/api/orcamentos/<orcamento_id>")
+def api_atualizar_orcamento(orcamento_id):
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status")
+    if status not in {"Pendente", "Aprovado", "Recusado"}:
+        return jsonify({"erro": "Status inválido."}), 400
+    dados = carregar_dados()
+    for item in dados["orcamentos"]:
+        if item.get("id") == orcamento_id:
+            item["status"] = status
+            salvar_dados(dados)
+            return jsonify(item)
+    return jsonify({"erro": "Orçamento não encontrado."}), 404
+
+@app.delete("/api/orcamentos/<orcamento_id>")
+def api_excluir_orcamento(orcamento_id):
+    dados = carregar_dados()
+    antes = len(dados["orcamentos"])
+    dados["orcamentos"] = [o for o in dados["orcamentos"] if o.get("id") != orcamento_id]
+    if len(dados["orcamentos"]) == antes:
+        return jsonify({"erro": "Orçamento não encontrado."}), 404
+    salvar_dados(dados)
+    return jsonify({"mensagem": "Orçamento removido."})
+
+@app.get("/assistente")
+def pagina_assistente():
+    return servir_react()
+
+
+@app.get("/api/ia/status")
+def api_ia_status():
+    return jsonify(ia.status())
+
+
+@app.post("/api/ia/config")
+def api_ia_config():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"erro": "Envie uma configuração válida."}), 400
+    try:
+        return jsonify(ia.configure(payload))
+    except ValueError as error:
+        return jsonify({"erro": str(error)}), 400
+
+
+@app.post("/api/chat")
+def api_chat():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or not isinstance(payload.get("message"), str):
+        return jsonify({"erro": "Envie uma mensagem de texto."}), 400
+    message = payload["message"].strip()
+    if not message or len(message) > 6000:
+        return jsonify({"erro": "A mensagem deve ter entre 1 e 6.000 caracteres."}), 400
+    mode = payload.get('mode', 'local')
+    if mode not in ('local', 'ai'):
+        return jsonify({"erro": "Modo de conversa inválido."}), 400
+    if not isinstance(payload.get('include_business', False), bool):
+        return jsonify({"erro": "Opção de contexto inválida."}), 400
+    history = payload.get('history', [])
+    if not isinstance(history, list) or len(history) > 20:
+        return jsonify({"erro": "O histórico deve conter até 20 mensagens."}), 400
+    for item in history:
+        if (not isinstance(item, dict) or item.get('role') not in ('user', 'assistant')
+                or not isinstance(item.get('content'), str) or not 1 <= len(item['content']) <= 12000):
+            return jsonify({"erro": "Histórico de conversa inválido."}), 400
+    if sum(len(x['content']) for x in history) > 32000:
+        return jsonify({"erro": "Histórico muito longo. Inicie uma nova conversa."}), 400
+    if mode == 'ai':
+        context = None
+        if payload.get('include_business'):
+            dados = carregar_dados()
+            context = ia.summary(dados, calcular_valor_hora(dados))
+        knowledge = ia.retrieve_knowledge(message)
+        try:
+            return jsonify(ia.answer(message, history, context, knowledge))
+        except ia.AIError as error:
+            return jsonify({"erro": str(error)}), error.code
+    dados = carregar_dados()
+    local_result = responder(message, dados, calcular_valor_hora(dados), history)
+    if local_result is not None:
+        reply, actions = local_result
+        return jsonify({"reply": reply, "actions": actions, "mode": "local"})
+    knowledge = ia.retrieve_knowledge(message, limit=1)
+    if knowledge:
+        return jsonify({"reply": knowledge[0]["answer"], "actions": [], "mode": "local", "knowledge_count": 1})
+    return jsonify({"reply": "Ainda não entendi o que você quer fazer. Pode me contar um pouco mais? No modo local, consigo consultar orçamentos, despesas e simular preços. Para conversar sobre assuntos gerais, ative IA no seletor do chat.", "actions": [], "mode": "local"})
+
+
+@app.get("/assets/<path:filename>")
+def react_assets(filename):
+    return send_from_directory(BASE_DIR / "frontend" / "dist" / "assets", filename)
 
 
 # =========================================================

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Node / Vite
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# PyInstaller / builds
+build/
+dist/
+*.spec
+*.exe
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dados locais / privacidade
+dados_precificacao.json
+
+# Logs / local secrets
+*.log
+.env
+.env.*
+!.env.example
